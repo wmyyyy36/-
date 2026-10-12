@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单摆模拟器 · 故障演练页</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #1a1a24;
+    color: #c8c8d8;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    overflow: hidden;
+  }
+  #scene { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    pointer-events: none;
+  }
+  #hud b { color: #6ee7ff; font-weight: normal; }
+  #panel {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 14px 18px;
+    background: rgba(28, 28, 40, .82);
+    border: 1px solid rgba(110, 231, 255, .16);
+    border-radius: 10px;
+    font-size: 12px;
+  }
+  #reset {
+    padding: 7px 16px;
+    background: transparent;
+    color: #6ee7ff;
+    border: 1px solid rgba(110, 231, 255, .4);
+    border-radius: 6px;
+    font: inherit;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hud"></div>
+<div id="panel">
+  <button id="reset" type="button">重置摆动</button>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("scene");
+  const ctx = canvas.getContext("2d");
+  const hud = document.getElementById("hud");
+
+  const THETA0 = 45 * Math.PI / 180;
+  const G = 9.8;
+  const LEN_M = 2;
+
+  let theta = THETA0;
+  let omegaDot = 0;
+  let elapsed = 0;
+
+  function resetAnimation() {
+    theta = THETA0;
+    omegaDot = 0;
+    elapsed = 0;
+  }
+
+  document.getElementById("reset").addEventListener("click", resetAnimation);
+
+  function step(dt) {
+    const alpha = -(G / LEN_M) * Math.sin(theta);
+    omegaDot += alpha * dt;
+    theta += omegaDot * dt;
+    elapsed += dt;
+  }
+
+  function draw() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    ctx.clearRect(0, 0, w, h);
+
+    const px = w / 2, py = h * 0.2, len = 200;
+    const bx = px + len * Math.sin(theta);
+    const by = py + len * Math.cos(theta);
+
+    ctx.strokeStyle = "rgba(200, 200, 216, .55)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+
+    ctx.fillStyle = "#6ee7ff";
+    ctx.beginPath();
+    ctx.arc(px, py, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#4ec9e8";
+    ctx.beginPath();
+    ctx.arc(bx, by, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    hud.innerHTML =
+      "摆角 θ <b>" + (theta * 180 / Math.PI).toFixed(1) + "°</b><br>" +
+      "角速度 <b>" + omegaDot.toFixed(2) + " rad/s</b><br>" +
+      "已运行 <b>" + elapsed.toFixed(1) + " s</b>";
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.1);
+    last = now;
+    step(dt);
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
