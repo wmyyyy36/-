@@ -31,4 +31,13 @@ git show HEAD:week05/index.html                          # = bonus_b_celestial_p
 
 ## 打包进提交包时的位置
 
-提交包 `week05_Lab_7903126018_王梦芸.zip` 解压后，本目录的七个槽位文件夹直接位于压缩包顶层（不带 `starter_code/` 前缀），本对照表则改名为顶层 `SLOT_MAP.md`。仓库内的权威路径仍是 `starter_code/…`，两者内容一致，可用 `git -C <解压目录> show HEAD:starter_code/README.md` 对照。
+提交包 `week05_Lab_7903126018_王梦芸.zip` 解压后，本目录的七个槽位文件夹直接位于压缩包顶层（不带 `starter_code/` 前缀），本对照表改名为顶层 `SLOT_MAP.md`，详细报告改名为顶层 `REPORT.md`，截图放在顶层 `screenshots/`。仓库内的权威路径仍是 `starter_code/…` 与 `week05/…`。
+
+顶层这些"批阅视图"文件与仓库内权威文件**逐字节相同**，为避免同内容出现两份让 `git status` 刷屏，压缩包内 `.git/info/exclude` 追加了这 10 条顶层路径（该文件是本地忽略，不影响任何提交内容与历史）。校验对应关系请用：
+
+```
+git show week05-interactive-baseline:week05/index.html   # = 顶层 02_interactive/index.html
+git show HEAD:week07/index.html                          # = 顶层 bonus_a_double_pendulum/index.html
+git show HEAD:week05/index.html                          # = 顶层 index.html = 顶层 bonus_b_.../index.html
+git show HEAD:starter_code/README.md                     # = 顶层 SLOT_MAP.md
+```
