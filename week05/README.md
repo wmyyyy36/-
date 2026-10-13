@@ -17,20 +17,26 @@
 week05_Lab_7903126018_王梦芸/
 ├─ index.html                                  ← 最终完成的单文件交互应用（零依赖，双击即可运行）
 ├─ README.md                                   ← 仓库总览 + 人机协同三反思 + GitHub 链接
-├─ .git/                                       ← 完整提交历史（5 次功能提交 + 4 个基线标签）
-├─ week05/                                     ← 本实验在仓库中的权威目录
-│  ├─ index.html                               与根目录 index.html 同一份文件
-│  ├─ README.md                                本文件：详细实验报告
-│  └─ screenshots/
-│     ├─ 01-earth-preset.png                   地球预设 g=9.80，理论周期 2.84 s
-│     ├─ 02-jupiter-preset.png                 木星预设 g=24.79，周期缩短到 1.78 s
-│     ├─ 03-space-zero-g.png                   太空预设 g=0，摆球越过水平位置持续转动，周期显示 ∞
-│     ├─ 04-restored-after-reload.png          刷新后自动恢复自定义参数 275px / 3.33 / 0.0035
-│     └─ 05-advanced-double-pendulum.png       选做进阶：双摆混沌 + 彩虹拖尾（能量漂移 -0.0000%）
-└─ week01…week16 / starter_code/               ← 作品集其余目录（同一仓库，一并归档）
+├─ REPORT.md                                   ← 本文件：详细实验报告
+├─ SLOT_MAP.md                                 ← 官方 7 槽位 ↔ Git 提交/标签 ↔ 实测状态对照表
+├─ .gitignore                                  ← 任务五交付：仓库标准忽略规则
+├─ .git/                                       ← 完整提交历史（10 次提交 + 5 个基线标签）
+├─ screenshots/
+│  ├─ 01-earth-preset.png                      地球预设 g=9.80，理论周期 2.84 s
+│  ├─ 02-jupiter-preset.png                    木星预设 g=24.79，周期缩短到 1.78 s
+│  ├─ 03-space-zero-g.png                      太空预设 g=0，摆球越过水平位置持续转动，周期显示 ∞
+│  ├─ 04-restored-after-reload.png             刷新后自动恢复自定义参数 275px / 3.33 / 0.0035
+│  └─ 05-advanced-double-pendulum.png          选做进阶：双摆混沌 + 彩虹拖尾（能量漂移 -0.0000%）
+├─ 01_mvp/index.html                           ← 任务二：无交互面板的物理骨架（190 行）
+├─ 02_interactive/index.html                   ← 任务三：摆长/重力/阻尼三滑块面板
+├─ 03_buggy_practice/index.html                ← 任务四：故意保留 ReferenceError 的演练件
+├─ 04_fixed_solution/index.html                ← 任务四：自愈修复后基线（0 报错）
+├─ bonus_a_double_pendulum/index.html          ← 进阶 A：双摆混沌 + RK4 + 彩虹拖尾 + 拖拽
+├─ bonus_b_celestial_persistence/index.html    ← 进阶 B：天体预设 + localStorage（与根 index.html 同源）
+└─ template_report/                            ← 任务五：报告封面骨架 + .gitignore
 ```
 
-> 压缩包根目录的 `index.html` 是 `week05/index.html` 的提交副本，仅为方便批阅直接双击；**修改只改 `week05/index.html`**。
+> 根目录 `index.html`、`bonus_b_celestial_persistence/index.html`、`week05/index.html`（仓库内权威路径）三者**逐字节相同**，仅为方便批阅直接双击；修改只改 `week05/index.html`。
 
 ## 二、运行方式
 
@@ -60,6 +66,10 @@ week05_Lab_7903126018_王梦芸/
 
 ```
 $ git log --oneline
+7d89c77 feat(starter_code): 按官方 7 槽位补齐本人成果与任务五交付模版
+96a0759 docs(week05): 提交包命名对齐班级格式 week05_Lab_学号_姓名.zip
+6db3e58 docs(week05): 三反思改用本人撰写定稿，替换 AI 代拟草稿
+da060bf docs(week05): 补齐第 5 周提交包说明、人机协同三反思与实测截图
 f1e0d1f feat(week05): 新增天体预设胶囊与 localStorage 参数持久化
 c932fc7 feat(week07): 双摆混沌模拟器（RK4 积分 + 彩虹衰减拖尾 + 摆球拖拽释放）
 7621187 fix(03_buggy_practice): 重置按钮改用闭包内 addEventListener 绑定，消除 ReferenceError
@@ -73,6 +83,7 @@ c21c1ee chore: 初始化课程作品集主仓库（README、.gitignore、16 周�
 | `03-buggy-practice-fixed` | 事件绑定报错修复并复测通过 |
 | `week07-double-pendulum-baseline` | 双摆 RK4 + 拖尾 + 拖拽，能量漂移 0.0000% |
 | `week05-presets-persistence-baseline` | 天体预设 + 持久化，含本表 8 条实测结论 |
+| `week05-submission-package-baseline` | 官方 7 槽位全部填入本人成果，六格 iframe 实测通过（03 按设计报错） |
 
 **远端同步**：`git push origin main <tag>` 已执行，`git rev-list --count origin/main..HEAD` = 0，即本地与 `https://github.com/wmyyyy36/-` 完全一致，提交与标签均已在远端。
 

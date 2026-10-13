@@ -28,3 +28,7 @@ git show HEAD:week05/index.html                          # = bonus_b_celestial_p
 ## 六格统一实测方法
 
 在同一浏览器内用同源 `iframe` 依次加载六个槽位，每格挂载 `window.addEventListener('error')` 后模拟点击其重置按钮（`bonus_b` 额外点击"月球"胶囊），等待 0.7 秒采样：六格 Canvas 均正常创建，除 `03_buggy_practice` 按设计抛出唯一一条 `ReferenceError` 外，其余五格控制台 0 报错。
+
+## 打包进提交包时的位置
+
+提交包 `week05_Lab_7903126018_王梦芸.zip` 解压后，本目录的七个槽位文件夹直接位于压缩包顶层（不带 `starter_code/` 前缀），本对照表则改名为顶层 `SLOT_MAP.md`。仓库内的权威路径仍是 `starter_code/…`，两者内容一致，可用 `git -C <解压目录> show HEAD:starter_code/README.md` 对照。

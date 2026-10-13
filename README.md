@@ -64,12 +64,37 @@ portfolio/
 | GitHub 作品集（公开） | https://github.com/wmyyyy36/- |
 | 本周应用入口 | `index.html`（压缩包根目录）／仓库内权威路径 `week05/index.html` |
 | 详细实验报告 | `week05/README.md`（功能表、8 条实测验收证据、进阶说明、勘误） |
+| 槽位对照表 | `starter_code/README.md`（官方 7 个任务槽位 ↔ 提交/标签 ↔ 实测状态） |
 | 运行方式 | 双击 `index.html`，零依赖、不联网、无需安装环境 |
+
+## 压缩包目录结构（沿用课程官方 7 槽位，槽位内容全部为本人成果）
+
+```
+week05_Lab_7903126018_王梦芸/
+├── index.html                        # 最终单文件应用（= week05/index.html，天体预设 + 持久化）
+├── README.md                         # 本文件：含人机协同三反思与 GitHub 链接
+├── REPORT.md                         # 第 5 周详细实验报告（= week05/README.md）
+├── SLOT_MAP.md                       # 官方槽位 ↔ Git 提交/标签 ↔ 实测状态对照表
+├── .gitignore                        # 任务五交付：仓库标准忽略规则
+├── .git/                             # 完整提交历史（10 条 Commit + 5 个基线标签）
+├── screenshots/                      # 5 张实测截图（四种重力场 + 刷新恢复 + 双摆进阶）
+├── 01_mvp/                任务二     # 无面板的物理骨架
+├── 02_interactive/        任务三     # 摆长/重力/阻尼三滑块面板
+├── 03_buggy_practice/     任务四     # 故意保留 ReferenceError 的演练件（可稳定复现）
+├── 04_fixed_solution/     任务四     # 自愈修复后基线（0 报错）
+├── bonus_a_double_pendulum/  进阶 A  # 双摆混沌 + RK4 + 彩虹拖尾 + 拖拽
+├── bonus_b_celestial_persistence/ 进阶 B # 天体预设 + localStorage（与根 index.html 同源）
+└── template_report/       任务五     # 实验报告封面骨架 + .gitignore
+```
 
 ## 提交历史与远端同步
 
 ```
 $ git log --oneline
+7d89c77 feat(starter_code): 按官方 7 槽位补齐本人成果与任务五交付模版
+96a0759 docs(week05): 提交包命名对齐班级格式 week05_Lab_学号_姓名.zip
+6db3e58 docs(week05): 三反思改用本人撰写定稿，替换 AI 代拟草稿
+da060bf docs(week05): 补齐第 5 周提交包说明、人机协同三反思与实测截图
 f1e0d1f feat(week05): 新增天体预设胶囊与 localStorage 参数持久化
 c932fc7 feat(week07): 双摆混沌模拟器（RK4 积分 + 彩虹衰减拖尾 + 摆球拖拽释放）
 7621187 fix(03_buggy_practice): 重置按钮改用闭包内 addEventListener 绑定，消除 ReferenceError
@@ -77,8 +102,9 @@ eb1a074 feat(week05): 单摆模拟器接入实时参数面板（摆长/重力/�
 c21c1ee chore: 初始化课程作品集主仓库（README、.gitignore、16 周实验目录）
 ```
 
-基线标签（annotated tag，说明里写有实测结论）：`week05-interactive-baseline`、`03-buggy-practice-fixed`、`week07-double-pendulum-baseline`、`week05-presets-persistence-baseline`。
-远端同步：`git push origin main <tag>` 已执行，`git rev-list --count origin/main..HEAD` = 0。
+基线标签（annotated tag，说明里写有实测结论）：`week05-interactive-baseline`、`03-buggy-practice-fixed`、`week07-double-pendulum-baseline`、`week05-presets-persistence-baseline`、`week05-submission-package-baseline`。
+远端同步：`git push origin main --follow-tags` 已执行，`git rev-list --count origin/main..HEAD` = 0。
+包内 `.git` 校验命令：`git -C 解压目录 log --oneline`、`git -C 解压目录 tag -l`、`git -C 解压目录 show week05-interactive-baseline:week05/index.html`。
 
 ## 人机协同个人复盘（王梦芸 本人撰写）
 
