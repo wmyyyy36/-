@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单摆物理模拟器 MVP（任务二 · 无交互面板） · 王梦芸 7903126018</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #1a1a24;
+    color: #c8c8d8;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    overflow: hidden;
+  }
+  #scene { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    letter-spacing: .5px;
+    pointer-events: none;
+    text-shadow: 0 0 8px rgba(0, 0, 0, .8);
+  }
+  #hud b { color: #6ee7ff; font-weight: normal; }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hud"></div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("scene");
+  const ctx = canvas.getContext("2d");
+  const hud = document.getElementById("hud");
+
+  // ---- 物理参数（可由面板实时修改）----
+  const PX_PER_M = 100;            // 像素-米换算
+  const THETA0 = 45 * Math.PI / 180;
+  const BOB_R = 14;
+
+  const params = {
+    lengthPx: 200,                 // 摆长 L = 200px
+    g: 9.8,                        // 重力加速度 m/s^2
+    damping: 0.0                   // 阻尼系数：每 1/60 s 的速度衰减比例
+  };
+
+  // ---- 状态 ----
+  let theta = THETA0;
+  let omegaDot = 0;
+  let elapsed = 0;
+  let dpr = 1;
+  let pivotX = 0;
+  let pivotY = 0;
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(canvas.clientWidth * dpr);
+    canvas.height = Math.floor(canvas.clientHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const h = canvas.clientHeight;
+    // 支点尽量靠上，同时保证最长摆 + 底部面板不越界
+    pivotX = canvas.clientWidth / 2;
+    pivotY = Math.max(60, Math.min(h * 0.18, h - params.lengthPx - BOB_R - 96));
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // 固定步长积分（RK4）保证不同帧率下运动一致
+  const STEP = 1 / 240;
+  let accumulator = 0;
+
+  function derivatives(state) {
+    // 摆的转动方程：θ'' = -(g/L)·sinθ；阻尼以指数衰减形式单独施加于角速度
+    return [state[1], -(params.g / (params.lengthPx / PX_PER_M)) * Math.sin(state[0])];
+  }
+
+  function rk4(dt) {
+    const s = [theta, omegaDot];
+    const k1 = derivatives(s);
+    const k2 = derivatives([s[0] + k1[0] * dt / 2, s[1] + k1[1] * dt / 2]);
+    const k3 = derivatives([s[0] + k2[0] * dt / 2, s[1] + k2[1] * dt / 2]);
+    const k4 = derivatives([s[0] + k3[0] * dt, s[1] + k3[1] * dt]);
+    theta += dt * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]) / 6;
+    omegaDot += dt * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]) / 6;
+
+    // 阻尼：把 c 定义为"每 1/60 s 速度乘以 (1-c)"，与帧率无关的自然衰减
+    if (params.damping > 0) omegaDot *= Math.pow(1 - params.damping, dt * 60);
+  }
+
+  function drawGuide() {
+    // 平衡位置竖线与摆角刻度弧
+    ctx.strokeStyle = "rgba(110, 231, 255, .12)";
+    ctx.setLineDash([4, 6]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pivotX, pivotY);
+    ctx.lineTo(pivotX, pivotY + params.lengthPx + 40);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = "rgba(110, 231, 255, .2)";
+    ctx.beginPath();
+    ctx.arc(pivotX, pivotY, Math.min(52, params.lengthPx * .3), Math.PI / 2 - THETA0, Math.PI / 2 + THETA0);
+    ctx.stroke();
+  }
+
+  function drawPendulum(bobX, bobY) {
+    // 悬线
+    ctx.strokeStyle = "rgba(200, 200, 216, .55)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pivotX, pivotY);
+    ctx.lineTo(bobX, bobY);
+    ctx.stroke();
+
+    // 支点
+    ctx.fillStyle = "#6ee7ff";
+    ctx.beginPath();
+    ctx.arc(pivotX, pivotY, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 摆球外发光
+    const halo = ctx.createRadialGradient(bobX, bobY, BOB_R * .4, bobX, bobY, BOB_R * 4);
+    halo.addColorStop(0, "rgba(110, 231, 255, .45)");
+    halo.addColorStop(1, "rgba(110, 231, 255, 0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(bobX, bobY, BOB_R * 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 摆球本体
+    const body = ctx.createRadialGradient(
+      bobX - BOB_R * .35, bobY - BOB_R * .35, BOB_R * .15,
+      bobX, bobY, BOB_R
+    );
+    body.addColorStop(0, "#d8fbff");
+    body.addColorStop(0.5, "#4ec9e8");
+    body.addColorStop(1, "#1b5f78");
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(bobX, bobY, BOB_R, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function updateHud() {
+    const lengthM = params.lengthPx / PX_PER_M;
+    const period = 2 * Math.PI / Math.sqrt(params.g / lengthM);
+    hud.innerHTML =
+      "摆长 L <b>" + params.lengthPx + " px</b> (" + lengthM.toFixed(2) + " m)<br>" +
+      "重力 g <b>" + params.g.toFixed(1) + " m/s²</b><br>" +
+      "阻尼 c <b>" + params.damping.toFixed(4) + "</b><br>" +
+      "摆角 θ <b>" + (theta * 180 / Math.PI).toFixed(1) + "°</b><br>" +
+      "角速度 <b>" + omegaDot.toFixed(2) + " rad/s</b><br>" +
+      "理论周期 T <b>" + period.toFixed(2) + " s</b><br>" +
+      "已运行 <b>" + elapsed.toFixed(1) + " s</b>";
+  }
+
+
+  let last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000;
+    last = now;
+    if (dt > 0.1) dt = 0.1;          // 切后台回来时避免时间跳变
+    accumulator += dt;
+    elapsed += dt;
+    while (accumulator >= STEP) {
+      rk4(STEP);
+      accumulator -= STEP;
+    }
+
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    drawGuide();
+
+    const bobX = pivotX + params.lengthPx * Math.sin(theta);
+    const bobY = pivotY + params.lengthPx * Math.cos(theta);
+    drawPendulum(bobX, bobY);
+    updateHud();
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

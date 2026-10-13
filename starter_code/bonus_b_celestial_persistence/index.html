@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单摆简谐振动模拟器 · 第 5 周实验</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: #1a1a24;
+    color: #c8c8d8;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    overflow: hidden;
+  }
+  #scene { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    letter-spacing: .5px;
+    pointer-events: none;
+    text-shadow: 0 0 8px rgba(0, 0, 0, .8);
+  }
+  #hud b { color: #6ee7ff; font-weight: normal; }
+  #panel {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px 28px;
+    padding: 14px 18px;
+    background: rgba(28, 28, 40, .82);
+    border: 1px solid rgba(110, 231, 255, .16);
+    border-radius: 10px;
+    backdrop-filter: blur(6px);
+    font-size: 12px;
+    letter-spacing: .5px;
+  }
+  .ctrl { display: flex; align-items: center; gap: 10px; }
+  .ctrl label { color: #8a8aa0; white-space: nowrap; }
+  .ctrl output { color: #6ee7ff; min-width: 62px; text-align: right; }
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 150px;
+    height: 3px;
+    background: #33334a;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #4ec9e8;
+    box-shadow: 0 0 8px rgba(110, 231, 255, .6);
+    cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 13px;
+    height: 13px;
+    border: none;
+    border-radius: 50%;
+    background: #4ec9e8;
+    box-shadow: 0 0 8px rgba(110, 231, 255, .6);
+    cursor: pointer;
+  }
+  #reset {
+    padding: 7px 16px;
+    background: transparent;
+    color: #6ee7ff;
+    border: 1px solid rgba(110, 231, 255, .4);
+    border-radius: 6px;
+    font: inherit;
+    letter-spacing: .5px;
+    cursor: pointer;
+    transition: background .15s, box-shadow .15s;
+  }
+  #reset:hover { background: rgba(110, 231, 255, .12); box-shadow: 0 0 12px rgba(110, 231, 255, .25); }
+  #reset:active { background: rgba(110, 231, 255, .22); }
+  #presets { display: flex; gap: 8px; }
+  .pill {
+    padding: 6px 14px;
+    background: rgba(110, 231, 255, .06);
+    color: #8a8aa0;
+    border: 1px solid rgba(110, 231, 255, .18);
+    border-radius: 999px;
+    font: inherit;
+    font-size: 12px;
+    letter-spacing: .5px;
+    cursor: pointer;
+    transition: color .18s, background .18s, border-color .18s, box-shadow .18s;
+  }
+  .pill:hover { color: #c8c8d8; border-color: rgba(110, 231, 255, .4); }
+  .pill[aria-pressed="true"] {
+    color: #0d1a20;
+    background: #6ee7ff;
+    border-color: #6ee7ff;
+    box-shadow: 0 0 14px rgba(110, 231, 255, .45);
+  }
+  #saved { color: #8a8aa0; opacity: 0; transition: opacity .3s; }
+  #saved.show { opacity: 1; }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hud"></div>
+<div id="panel">
+  <div class="ctrl">
+    <label for="len">摆长 L</label>
+    <input id="len" type="range" min="100" max="350" step="1" value="200">
+    <output id="lenOut">200 px</output>
+  </div>
+  <div class="ctrl">
+    <label for="grav">重力 g</label>
+    <input id="grav" type="range" min="0" max="25" step="0.01" value="9.8">
+    <output id="gravOut">9.8 m/s²</output>
+  </div>
+  <div class="ctrl">
+    <label for="damp">阻尼 c</label>
+    <input id="damp" type="range" min="0" max="0.01" step="0.0001" value="0">
+    <output id="dampOut">0.0000</output>
+  </div>
+  <div class="ctrl" id="presets">
+    <label>预设天体</label>
+    <button class="pill" type="button" data-g="9.8" data-id="earth" aria-pressed="true">地球</button>
+    <button class="pill" type="button" data-g="1.62" data-id="moon" aria-pressed="false">月球</button>
+    <button class="pill" type="button" data-g="24.79" data-id="jupiter" aria-pressed="false">木星</button>
+    <button class="pill" type="button" data-g="0" data-id="space" aria-pressed="false">太空</button>
+  </div>
+  <button id="reset" type="button">重置摆动</button>
+  <span id="saved"></span>
+</div>
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("scene");
+  const ctx = canvas.getContext("2d");
+  const hud = document.getElementById("hud");
+
+  // ---- 物理参数（可由面板实时修改）----
+  const PX_PER_M = 100;            // 像素-米换算
+  const THETA0 = 45 * Math.PI / 180;
+  const BOB_R = 14;
+
+  const params = {
+    lengthPx: 200,                 // 摆长 L = 200px
+    g: 9.8,                        // 重力加速度 m/s^2
+    damping: 0.0                   // 阻尼系数：每 1/60 s 的速度衰减比例
+  };
+
+  // ---- 状态 ----
+  let theta = THETA0;
+  let omegaDot = 0;
+  let elapsed = 0;
+  let dpr = 1;
+  let pivotX = 0;
+  let pivotY = 0;
+
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(canvas.clientWidth * dpr);
+    canvas.height = Math.floor(canvas.clientHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const h = canvas.clientHeight;
+    // 支点尽量靠上，同时保证最长摆 + 底部面板不越界
+    pivotX = canvas.clientWidth / 2;
+    pivotY = Math.max(60, Math.min(h * 0.18, h - params.lengthPx - BOB_R - 96));
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // 固定步长积分（RK4）保证不同帧率下运动一致
+  const STEP = 1 / 240;
+  let accumulator = 0;
+
+  function derivatives(state) {
+    // 摆的转动方程：θ'' = -(g/L)·sinθ；阻尼以指数衰减形式单独施加于角速度
+    return [state[1], -(params.g / (params.lengthPx / PX_PER_M)) * Math.sin(state[0])];
+  }
+
+  function rk4(dt) {
+    const s = [theta, omegaDot];
+    const k1 = derivatives(s);
+    const k2 = derivatives([s[0] + k1[0] * dt / 2, s[1] + k1[1] * dt / 2]);
+    const k3 = derivatives([s[0] + k2[0] * dt / 2, s[1] + k2[1] * dt / 2]);
+    const k4 = derivatives([s[0] + k3[0] * dt, s[1] + k3[1] * dt]);
+    theta += dt * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]) / 6;
+    omegaDot += dt * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]) / 6;
+
+    // 阻尼：把 c 定义为"每 1/60 s 速度乘以 (1-c)"，与帧率无关的自然衰减
+    if (params.damping > 0) omegaDot *= Math.pow(1 - params.damping, dt * 60);
+  }
+
+  function drawGuide() {
+    // 平衡位置竖线与摆角刻度弧
+    ctx.strokeStyle = "rgba(110, 231, 255, .12)";
+    ctx.setLineDash([4, 6]);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pivotX, pivotY);
+    ctx.lineTo(pivotX, pivotY + params.lengthPx + 40);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.strokeStyle = "rgba(110, 231, 255, .2)";
+    ctx.beginPath();
+    ctx.arc(pivotX, pivotY, Math.min(52, params.lengthPx * .3), Math.PI / 2 - THETA0, Math.PI / 2 + THETA0);
+    ctx.stroke();
+  }
+
+  function drawPendulum(bobX, bobY) {
+    // 悬线
+    ctx.strokeStyle = "rgba(200, 200, 216, .55)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(pivotX, pivotY);
+    ctx.lineTo(bobX, bobY);
+    ctx.stroke();
+
+    // 支点
+    ctx.fillStyle = "#6ee7ff";
+    ctx.beginPath();
+    ctx.arc(pivotX, pivotY, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 摆球外发光
+    const halo = ctx.createRadialGradient(bobX, bobY, BOB_R * .4, bobX, bobY, BOB_R * 4);
+    halo.addColorStop(0, "rgba(110, 231, 255, .45)");
+    halo.addColorStop(1, "rgba(110, 231, 255, 0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(bobX, bobY, BOB_R * 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 摆球本体
+    const body = ctx.createRadialGradient(
+      bobX - BOB_R * .35, bobY - BOB_R * .35, BOB_R * .15,
+      bobX, bobY, BOB_R
+    );
+    body.addColorStop(0, "#d8fbff");
+    body.addColorStop(0.5, "#4ec9e8");
+    body.addColorStop(1, "#1b5f78");
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(bobX, bobY, BOB_R, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function updateHud() {
+    const lengthM = params.lengthPx / PX_PER_M;
+    const period = params.g > 0
+      ? (2 * Math.PI / Math.sqrt(params.g / lengthM)).toFixed(2) + " s"
+      : "∞（失重·无恢复力）";
+    hud.innerHTML =
+      "摆长 L <b>" + params.lengthPx + " px</b> (" + lengthM.toFixed(2) + " m)<br>" +
+      "重力 g <b>" + params.g.toFixed(2) + " m/s²</b><br>" +
+      "阻尼 c <b>" + params.damping.toFixed(4) + "</b><br>" +
+      "摆角 θ <b>" + (theta * 180 / Math.PI).toFixed(1) + "°</b><br>" +
+      "角速度 <b>" + omegaDot.toFixed(2) + " rad/s</b><br>" +
+      "理论周期 T <b>" + period + "</b><br>" +
+      "已运行 <b>" + elapsed.toFixed(1) + " s</b>" +
+      (activePreset !== "custom" ? "<br>预设 <b>" + activePreset + "</b>" : "<br>预设 <b>自定义</b>");
+  }
+
+  // ---- 控制面板接线 ----
+  const ui = {
+    len: document.getElementById("len"),
+    grav: document.getElementById("grav"),
+    damp: document.getElementById("damp"),
+    lenOut: document.getElementById("lenOut"),
+    gravOut: document.getElementById("gravOut"),
+    dampOut: document.getElementById("dampOut"),
+    reset: document.getElementById("reset"),
+    saved: document.getElementById("saved"),
+    pills: Array.from(document.querySelectorAll(".pill"))
+  };
+
+  function syncLabels() {
+    ui.lenOut.textContent = params.lengthPx + " px";
+    ui.gravOut.textContent = params.g.toFixed(2) + " m/s²";
+    ui.dampOut.textContent = params.damping.toFixed(4);
+  }
+
+  // ---- 天体预设：重力平滑过渡 ----
+  let activePreset = "earth";
+  let tweenId = 0;
+
+  function markPreset(id) {
+    activePreset = id;
+    ui.pills.forEach(btn => btn.setAttribute("aria-pressed", String(btn.dataset.id === id)));
+  }
+
+  function animateGravity(to, ms) {
+    if (tweenId) cancelAnimationFrame(tweenId);
+    const from = params.g;
+    const t0 = performance.now();
+    const duration = Math.abs(to - from) < 0.001 ? 0 : (ms || 700);
+    const tick = now => {
+      const k = duration === 0 ? 1 : Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - k, 3);        // easeOutCubic
+      params.g = from + (to - from) * eased;
+      ui.grav.value = params.g;
+      syncLabels();
+      if (k < 1) {
+        tweenId = requestAnimationFrame(tick);
+      } else {
+        tweenId = 0;
+        saveParams();
+      }
+    };
+    tweenId = requestAnimationFrame(tick);
+  }
+
+  ui.pills.forEach(btn => {
+    btn.addEventListener("click", () => {
+      markPreset(btn.dataset.id);
+      animateGravity(Number(btn.dataset.g), 700);
+    });
+  });
+
+  // ---- localStorage 持久化 ----
+  const STORAGE_KEY = "fmu.week05.pendulum";
+  let saveTimer = 0;
+
+  function saveParams() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        lengthPx: params.lengthPx,
+        g: params.g,
+        damping: params.damping,
+        preset: activePreset
+      }));
+      flashSaved();
+    } catch {
+      ui.saved.textContent = "本地缓存不可用";
+      ui.saved.classList.add("show");
+    }
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveParams, 400);
+  }
+
+  function flashSaved() {
+    ui.saved.textContent = "已保存 " + new Date().toLocaleTimeString("zh-CN");
+    ui.saved.classList.add("show");
+    clearTimeout(flashSaved.t);
+    flashSaved.t = setTimeout(() => ui.saved.classList.remove("show"), 1600);
+  }
+
+  const clamp = (v, lo, hi) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    return Math.min(hi, Math.max(lo, n));
+  };
+
+  function loadParams() {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      return;
+    }
+    if (!raw) return;
+    let d;
+    try {
+      d = JSON.parse(raw);
+    } catch {
+      return;
+    }
+    const len = clamp(d.lengthPx, 100, 350);
+    const g = clamp(d.g, 0, 25);
+    const damp = clamp(d.damping, 0, 0.01);
+    if (len !== null) { params.lengthPx = len; ui.len.value = len; }
+    if (g !== null) { params.g = g; ui.grav.value = g; }
+    if (damp !== null) { params.damping = damp; ui.damp.value = damp; }
+    markPreset(ui.pills.some(b => b.dataset.id === d.preset && Math.abs(Number(b.dataset.g) - g) < 0.05) ? d.preset : "custom");
+  }
+
+  loadParams();
+  syncLabels();
+  resize();
+
+  ui.len.addEventListener("input", () => {
+    params.lengthPx = Number(ui.len.value);
+    resize();
+    syncLabels();
+    scheduleSave();
+  });
+  ui.grav.addEventListener("input", () => {
+    params.g = Number(ui.grav.value);
+    markPreset(ui.pills.find(b => Math.abs(Number(b.dataset.g) - params.g) < 0.05)?.dataset.id || "custom");
+    syncLabels();
+    scheduleSave();
+  });
+  ui.damp.addEventListener("input", () => {
+    params.damping = Number(ui.damp.value);
+    syncLabels();
+    scheduleSave();
+  });
+  ui.reset.addEventListener("click", () => {
+    theta = THETA0;
+    omegaDot = 0;
+    elapsed = 0;
+    accumulator = 0;
+  });
+
+  let last = performance.now();
+  function frame(now) {
+    let dt = (now - last) / 1000;
+    last = now;
+    if (dt > 0.1) dt = 0.1;          // 切后台回来时避免时间跳变
+    accumulator += dt;
+    elapsed += dt;
+    while (accumulator >= STEP) {
+      rk4(STEP);
+      accumulator -= STEP;
+    }
+
+    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    drawGuide();
+
+    const bobX = pivotX + params.lengthPx * Math.sin(theta);
+    const bobY = pivotY + params.lengthPx * Math.cos(theta);
+    drawPendulum(bobX, bobY);
+    updateHud();
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+# ============================================================
+# 课程实验仓库标准忽略规则（第 5 周交付模版）
+# 原则：只提交「可复现作品的源码 + 文档 + 证据」，
+#       不提交依赖包、临时产物、原始数据与任何密钥。
+# ============================================================
+
+# ---- 依赖与构建产物 ----
+node_modules/
+dist/
+build/
+package-lock.json.tmp
+
+# ---- Python 运行痕迹 ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
+
+# ---- 大文件与原始数据（体积大、不可复现，改放网盘并在 README 注明）----
+data/raw/
+*.csv.gz
+*.parquet
+*.zip
+*.7z
+*.rar
+
+# ---- 系统与编辑器垃圾 ----
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.tmp
+~$*
+
+# ---- 密钥与隐私：绝对不能进仓库 ----
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+token.txt
+# 若已误提交令牌，立即在 GitHub 上撤销并重写历史，不要只删文件。
+
+# ---- 交付例外 ----
+# 本忽略规则文件本身需要随包提交，故不忽略 .gitignore
+!.gitignore
